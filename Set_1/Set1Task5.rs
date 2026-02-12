@@ -1,5 +1,30 @@
 use std::fs;
 use std::io;
+use std::fmt;
+use std::error::Error;
+
+#[derive(Debug)]
+enum CryptoError {
+	InvalidHexLength,
+	InvalidHexDigit,
+	BufferLengthMismatch,
+	KeyTooLong,
+	EmptyKey,
+}
+
+impl fmt::Display for CryptoError {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			CryptoError::InvalidHexLength => write!(f, "Incorrect hex length"),
+			CryptoError::InvalidHexDigit => write!(f, "Incorrect hex digit"),
+			CryptoError::BufferLengthMismatch => write!(f, "Buffer lengths need to be the same"),
+			CryptoError::KeyTooLong => write!(f, "Key can't be longer than plaintext"),
+			CryptoError::EmptyKey => write!(f, "Key can't be empty"),
+		}
+	}
+}
+
+impl Error for CryptoError {}
 
 fn hex_val(b: u8) -> Option<u8> {
         match b {
@@ -10,51 +35,46 @@ fn hex_val(b: u8) -> Option<u8> {
         }
 }
 
-fn hex_to_bytes(input: &str) -> Result<Vec<u8>, &'static str> {
+fn hex_to_bytes(input: &str) -> Result<Vec<u8>, CryptoError> {
         if input.len() % 2 != 0{
-                return Err("Incorrect Hex Length");
+                return Err(CryptoError::InvalidHexLength);
         }
 
         let mut result: Vec<u8> = Vec::with_capacity(input.len() / 2);
 
         for pair in input.as_bytes().chunks(2){
-                let hi = hex_val(pair[0]).ok_or("Bad hex")?;
-                let lo = hex_val(pair[1]).ok_or("Bad hex")?;
+                let hi = hex_val(pair[0]).ok_or(CryptoError::InvalidHexDigit)?;
+                let lo = hex_val(pair[1]).ok_or(CryptoError::InvalidHexDigit)?;
                 result.push(hi << 4 | lo);
         }
         Ok(result)
 }
 
-fn fixed_xor(buf1: &[u8], buf2: &[u8]) -> Result<Vec<u8>, &'static str>{
+fn fixed_xor(buf1: &[u8], buf2: &[u8]) -> Result<Vec<u8>, CryptoError>{
 	if buf1.len() != buf2.len(){
-		return Err("Buffers need to be of the same size");
+		return Err(CryptoError::BufferLengthMismatch);
 	}
 	Ok(buf1.iter().zip(buf2).map(|(x,y)| x ^ y).collect())
 }
 
-fn gen_repeat_key(key: String, len: usize) -> Result<Vec<u8>, &'static str>{
-	if key.trim().len() > len {
-		return Err("Repeated key generation error: Input key length needs to be less than plaintext length");
-	}
-	let mut repeater = key.trim().as_bytes().iter().cycle();
-	let mut repeated_key: Vec<u8> = Vec::new();
-	for _ in 0..len{
-		repeated_key.push(*repeater.next().expect("Repeated key generation error"));
-	}
-	Ok(repeated_key)
+fn gen_repeat_key(key: String, len: usize) -> Result<Vec<u8>, CryptoError>{
+	let key = key.trim();
+	if key.len() == 0 { return Err(CryptoError::EmptyKey); }
+	if key.trim().len() > len { return Err(CryptoError::KeyTooLong); }
+	Ok(key.as_bytes().iter().cycle().take(len).copied().collect())
 }
 
-fn main() -> io::Result<()>{
-        let stdin = io::stdin();
+fn main() -> Result<(), Box<dyn Error>>{
 	let plaintext = fs::read_to_string("Set1Task5.txt")?;
-	let mut key = String::new();
-	
 	let plaintext = plaintext.trim().as_bytes();
+	
 	println!("Key:");
+	let mut key = String::new();
+        let stdin = io::stdin();
 	stdin.read_line(&mut key)?;
 	
-	let repeated_key = gen_repeat_key(key, plaintext.len()).unwrap();
-	let output = fixed_xor(&plaintext, &repeated_key).unwrap();
+	let repeated_key = gen_repeat_key(key, plaintext.len())?;
+	let output = fixed_xor(&plaintext, &repeated_key)?;
 	for b in output {
 		print!("{:02x}", b);
 	}	
