@@ -32,6 +32,18 @@ fn fixed_xor(buf1: &[u8], buf2: &[u8]) -> Result<Vec<u8>, &'static str>{
 	Ok(buf1.iter().zip(buf2).map(|(x,y)| x ^ y).collect())
 }
 
+fn gen_repeat_key(key: String, len: usize) -> Result<Vec<u8>, &'static str>{
+	if key.trim().len() > len {
+		return Err("Repeated key generation error: Input key length needs to be less than plaintext length");
+	}
+	let mut repeater = key.trim().as_bytes().iter().cycle();
+	let mut repeated_key: Vec<u8> = Vec::new();
+	for _ in 0..len{
+		repeated_key.push(*repeater.next().expect("Repeated key generation error"));
+	}
+	Ok(repeated_key)
+}
+
 fn main() -> io::Result<()>{
         let stdin = io::stdin();
 	let plaintext = fs::read_to_string("Set1Task5.txt")?;
@@ -40,13 +52,8 @@ fn main() -> io::Result<()>{
 	let plaintext = plaintext.trim().as_bytes();
 	println!("Key:");
 	stdin.read_line(&mut key)?;
-	let mut repeater = key.trim().as_bytes().iter().cycle();
-	let mut repeated_key: Vec<u8> = Vec::new();
 	
-	for _ in 0..plaintext.len(){
-		repeated_key.push(*repeater.next().unwrap());
-	}
-	
+	let repeated_key = gen_repeat_key(key, plaintext.len()).unwrap();
 	let output = fixed_xor(&plaintext, &repeated_key).unwrap();
 	for b in output {
 		print!("{:02x}", b);
