@@ -61,8 +61,8 @@ fn fixed_xor(buf1: &[u8], buf2: &[u8]) -> Result<Vec<u8>, CryptoError>{
 
 // Expects a clean input, i.e. run trim() first
 fn gen_repeat_key(key: &str, len: usize) -> Result<Vec<u8>, CryptoError>{
-	 println!("DEBUG: Key length: {}, Plaintext length: {}", key.len(), len);
-	println!("DEBUG: Key bytes: {:?}", key.as_bytes());
+	// eprintln!("DEBUG: Key length: {}, Plaintext length: {}", key.len(), len);
+	// eprintln!("DEBUG: Key bytes: {:?}", key.as_bytes());
 	if key.len() == 0 { return Err(CryptoError::EmptyKey); }
 	if key.len() > len { return Err(CryptoError::KeyTooLong); }
 	Ok(key.as_bytes().iter().cycle().take(len).copied().collect())
@@ -83,16 +83,19 @@ fn find_key_size(start: usize, end: usize, bytes: &[u8]) -> Result<Option<usize>
 	for block_size in start..=end {
 		let trimmed_size = bytes.len() / block_size * block_size; // Remove excess
 		let blocks: Vec<&[u8]> = bytes[..trimmed_size].chunks(block_size).collect();
-		let mut distances: Vec<f64> = Vec::new();
-		if blocks.len() < 2 { continue; }; // Not break; since excess might lead to 2 blocks again
+		let num_blocks = 8.min(blocks.len());
+		if num_blocks < 2 { continue; }; // Not break; since excess might lead to 2 blocks again
 
-		for i in 0..blocks.len()-1{
-			distances.push(hamming_distance(&blocks[i], &blocks[i+1]) as f64);
+		let mut total_dist = 0.0;
+		for i in 0..num_blocks-1{
+			for j in i+1..num_blocks{
+				// eprintln!("DEBUG: Looking at pair: ({:?}, {:?})", i, j); 
+				total_dist += hamming_distance(&blocks[i], &blocks[j]) as f64;
+			}
 		}
 
-		if distances.is_empty(){ continue; }
-		let avg = (distances.iter().sum::<f64>()) / ((distances.len() * block_size) as f64);
-		println!("Block size: {}, Avg: {}", block_size, avg);
+		let avg = total_dist / ((num_blocks - 1) as f64 * block_size as f64);
+		// eprintln!("DEBUG: Block size: {}, Avg: {}", block_size, avg);
 		if avg < best_edit_dist {
 			best_edit_dist = avg;
 			best_block_size = Some(block_size);
@@ -112,7 +115,7 @@ fn main() -> Result<(), Box<dyn Error>>{
 	let repeated_key = gen_repeat_key(&key, plaintext.len())?;
 	let output = fixed_xor(&plaintext, &repeated_key)?;
 	let length = find_key_size(2,40, &output)?;
-	println!("{:?}", length);
+	// eprintln!("{:?}", length);
 	/*
 	for b in output {
 		print!("{:02x}", b);
