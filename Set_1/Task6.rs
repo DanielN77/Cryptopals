@@ -103,7 +103,7 @@ fn find_key_size(start: usize, end: usize, bytes: &[u8]) -> Result<Option<usize>
 		
 fn main() -> Result<(), Box<dyn Error>>{
 
-	let plaintext = fs::read_to_string("Set1Task6.txt")?;
+	let plaintext = fs::read_to_string("Task6.txt")?;
 	let plaintext = plaintext.trim().as_bytes();
 
 	let mut key = String::new();

@@ -65,7 +65,7 @@ fn gen_repeat_key(key: String, len: usize) -> Result<Vec<u8>, CryptoError>{
 }
 
 fn main() -> Result<(), Box<dyn Error>>{
-	let plaintext = fs::read_to_string("Set1Task5.txt")?;
+	let plaintext = fs::read_to_string("Task5.txt")?;
 	let plaintext = plaintext.trim().as_bytes();
 	
 	println!("Key:");
