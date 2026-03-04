@@ -1,7 +1,9 @@
-use std::fs;
 use std::io::{self, Read};
+use std::fs;
 use std::fmt;
 use std::error::Error;
+
+use super::{Task3};
 
 #[derive(Debug)]
 enum CryptoError {
@@ -102,6 +104,13 @@ fn find_key_size(start: usize, end: usize, bytes: &[u8]) -> Result<Option<usize>
 		}
 	} 
 	Ok(best_block_size)
+}
+
+fn transpose_cipher(key_size: usize, bytes: &[u8]) -> Option<Vec<Vec<u8>>> {
+	if key_size == 0 { return None;}
+	Some((0..key_size).map(|i| {
+		bytes.iter().skip(i).step_by(key_size).copied().collect()
+	}).collect())
 }
 		
 fn main() -> Result<(), Box<dyn Error>>{
